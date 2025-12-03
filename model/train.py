@@ -215,9 +215,47 @@ if __name__ == "__main__":
     # -------------------------- set running environment ------------------------- #
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--dataset", type=str, default="pems08")
+    parser.add_argument(
+        "-d",
+        "--dataset_path",
+        type=str,
+        default="../data/pems08",
+        help="Path to the root directory containing the dataset files.",
+    )
+    parser.add_argument(
+        "-n",
+        "--dataset",
+        type=str,
+        default="PEMS08",
+        help="Name of the dataset to use (e.g., PEMS08, METRLA).",
+    )
     parser.add_argument("-g", "--gpu_num", type=int, default=0)
+    parser.add_argument(
+        "--log_path",
+        type=str,
+        default="../logs/",
+        help="Directory to store log files.",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        default=None,
+        help="Path to a JSON file containing argument values.",
+    )
     args = parser.parse_args()
+
+    if args.config:
+        with open(args.config, "r") as f:
+            config_args = json.load(f)
+
+        args.dataset_path = config_args.get("dataset_path", args.dataset_path)
+        args.dataset = config_args.get("dataset", args.dataset)
+        args.gpu_num = config_args.get("gpu_num", args.gpu_num)
+        args.log_path = config_args.get("log_path", args.log_path)
+
+    dataset_path = args.dataset_path
+    dataset = args.dataset.upper()
 
     seed = torch.randint(1000, (1,)) # set random seed here
     seed_everything(seed)
@@ -227,9 +265,7 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = f"{GPU_ID}"
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    dataset = args.dataset
-    dataset = dataset.upper()
-    data_path = f"../data/{dataset}"
+    data_path = dataset_path
     model_name = STAEformer.__name__
 
     with open(f"{model_name}.yaml", "r") as f:
@@ -243,7 +279,7 @@ if __name__ == "__main__":
     # ------------------------------- make log file ------------------------------ #
 
     now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    log_path = f"../logs/"
+    log_path = args.log_path
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     log = os.path.join(log_path, f"{model_name}-{dataset}-{now}.log")
